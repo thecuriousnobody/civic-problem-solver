@@ -1,0 +1,110 @@
+{
+  "timestamp": "2025-11-27 18:00:29",
+  "tests": {
+    "health": {
+      "status": "PASS",
+      "status_code": 200,
+      "response_time": 0.001821,
+      "content": {
+        "status": "healthy",
+        "service": "civic-resource-api-v2",
+        "version": "2.0.0",
+        "system": "2-agent-crewai-postgresql"
+      }
+    },
+    "basic_query": {
+      "status": "PASS",
+      "response_time": 5.534893989562988,
+      "search_performed": false,
+      "resources_count": 0,
+      "need_category": "",
+      "has_valid_response": true,
+      "execution_time_ms": null,
+      "step_timings": null,
+      "data": {
+        "success": true,
+        "response": "Hi there! \ud83d\udc4b I'm so glad you reached out. I'm here to help you navigate resources and support available right here in Central Illinois.\n\nWhatever you're dealing with right now\u2014whether it's finding a safe place to live, putting food on the table, getting healthcare, figuring out transportation, looking for work, or managing finances\u2014you're in the right place. There's no judgment here, just real help.\n\n**Some of the things I can help you find:**\n- \ud83c\udfe0 Housing assistance or emergency shelter\n- \ud83c\udf7d\ufe0f Food programs and meal support\n- \ud83c\udfe5 Healthcare services and medical help\n- \ud83d\ude8c Transportation options\n- \ud83d\udcbc Job training and employment support\n- \ud83d\udcb0 Financial assistance and benefits\n\nWhat's weighing on you most right now? Or if you're not sure where to start, just tell me a bit about what's going on, and we'll figure it out together. I'm here to listen and help however I can.",
+        "resources": [],
+        "session_id": "test_session",
+        "search_performed": false,
+        "need_category": "",
+        "urgency_level": "medium",
+        "response_source": "conversation",
+        "timestamp": "2025-11-27T18:00:34.820443",
+        "error": null
+      }
+    },
+    "search": {
+      "status": "PASS",
+      "search_actually_performed": true,
+      "resources_found": 6,
+      "response_contains_search_results": true,
+      "execution_time": 21.465401887893677,
+      "details": {
+        "need_category": "housing",
+        "response_source": "search",
+        "step_timings": {}
+      }
+    },
+    "resource_query": {
+      "status": "PASS",
+      "response_time": 20.785710096359253,
+      "search_performed": true,
+      "resources_count": 1,
+      "need_category": "general",
+      "has_valid_response": true,
+      "execution_time_ms": null,
+      "step_timings": null,
+      "data": {
+        "success": true,
+        "response": "I'm really glad you reached out about child safety resources\u2014that shows you care deeply about protecting the children in your life. Child safety concerns can feel urgent and important, and I want to help you find exactly what you need.\n\nTo point you toward the best resources, I'd like to understand a bit more about what you're looking for:\n\n- **Are you concerned about a child's immediate safety?** (If yes, please call 911 or the Childhelp National Child Abuse Hotline: 1-800-422-4453)\n- **Are you looking for prevention resources** like parenting classes or safety education?\n- **Do you need help reporting suspected abuse or neglect?**\n- **Are you seeking support services** for a child who's experienced trauma?\n\nIn the meantime, I found a great starting point for you:\n\n**211 Central Illinois** is a comprehensive resource hub that connects you to child safety services across our region. You can simply dial **2-1-1** from any phone, and their specialists can listen to your specific situation and connect you with exactly what you need\u2014whether that's emergency services, counseling, prevention programs, or reporting resources.\n\nThe detailed information about 211 and what they offer is displayed on the right side of your screen.\n\n**You're not alone in this.** Reaching out for help is a sign of strength, not weakness. If you'd like to tell me more about what's concerning you, I'm here to listen and help narrow down the best resources for your specific situation.\n\nWhat matters most to you right now?",
+        "resources": [
+          {
+            "name": "211 Central Illinois",
+            "category": "General",
+            "description": "Comprehensive directory of general resources in Central Illinois",
+            "contact": "Dial 2-1-1",
+            "url": "https://211centralillinois.org",
+            "next_step": "Call 211 and ask about general assistance",
+            "location": "Central Illinois",
+            "eligibility": "Available to all residents"
+          }
+        ],
+        "session_id": "test_session",
+        "search_performed": true,
+        "need_category": "general",
+        "urgency_level": "medium",
+        "response_source": "search",
+        "timestamp": "2025-11-27T18:01:17.072158",
+        "error": null
+      }
+    },
+    "resource_validation": {
+      "total_resources": 1,
+      "url_validation": [
+        {
+          "url": "https://211centralillinois.org",
+          "status": "FAIL",
+          "error": "HTTPSConnectionPool(host='211centralillinois.org', port=443): Max retries exceeded with url: / (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x103b1a8c0>: Failed to resolve '211centralillinois.org' ([Errno 8] nodename nor servname provided, or not known)\"))",
+          "accessible": false,
+          "resource_name": "211 Central Illinois"
+        }
+      ],
+      "phone_validation": [],
+      "issues": [
+        "Resource '211 Central Illinois' has broken URL: https://211centralillinois.org"
+      ]
+    }
+  },
+  "summary": {
+    "total_tests": 5,
+    "passed": 4,
+    "failed": 1,
+    "critical_issues": [
+      "resource_validation: Failed"
+    ],
+    "recommendations": [
+      "\ud83d\udccb Fix 1 resource data issues (broken URLs/phones)"
+    ]
+  }
+}

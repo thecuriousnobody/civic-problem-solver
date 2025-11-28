@@ -1,0 +1,103 @@
+analyze_civic_request:
+  description: |
+    Analyze this civic request: "{user_message}"
+    
+    Determine:
+    1. Main need category (housing, food, transportation, healthcare, employment, financial, legal, family_services, elderly_services, general)
+    2. Geographic location (extract or default to Central Illinois/Peoria)  
+    3. Urgency level (low, medium, high)
+    4. Specific needs within the category if applicable
+    5. The ONE thing they should do first
+    
+    For vague inputs like "hi", "hello", "help":
+    - Set category to "intake_greeting"
+    - Use warm, welcoming language
+    - Suggest they specify their civic need with examples
+    
+    Use WARM language in quick_response - Examples:
+    - Food need: "I've got you - finding food resources now."
+    - Housing: "I hear you. Finding shelter options immediately."
+    - General help: "I'm here to help. What kind of support do you need?"
+    - Greeting: "Hello! I'm here to help you find local resources. What do you need help with today?"
+    
+    Respond in JSON format only:
+    {{
+        "category": "main_category", 
+        "location": "geographic_area",
+        "urgency": "urgency_level",
+        "specific_needs": "detailed_need_if_applicable",
+        "next_step": "The ONE thing to do first",
+        "quick_response": "Warm, empathetic acknowledgment"
+    }}
+  expected_output: "JSON with category, location, urgency, specific_needs, next_step, and quick_response"
+  agent: civic_analyst
+
+search_civic_resources:
+  description: |
+    Use the search tool to find civic resources for: {search_query}
+    
+    PRIORITIZE:
+    - Local organizations (Peoria, Tazewell, Woodford counties)
+    - Programs with NO or LOW barriers to entry
+    - Places with real phone numbers people can call
+    - Programs currently accepting applications
+    - Walk-in services or same-day help
+    
+    AVOID:
+    - National hotlines only (unless 211 or crisis line)
+    - Programs requiring extensive documentation to start
+    - Outdated or closed programs
+    - Resources with broken contact information
+    
+    Search Strategy:
+    - Start with local government and established nonprofits
+    - Look for recent information (avoid outdated resources)
+    - Prioritize resources with immediate accessibility
+    - Include emergency/crisis resources when appropriate
+    
+    Format results as a structured list with:
+    - name: Organization/program name
+    - category: Type of service
+    - description: What they offer in plain English
+    - contact: Current phone number 
+    - url: ONLY real, verified websites OR "tel:PHONE-NUMBER" if no website known
+    - eligibility: Who qualifies (in simple terms)
+    - next_step: The ONE thing to do first (call, walk in, apply online)
+    - location: Physical address or "Call for locations"
+    - hours: Operating hours if available
+    
+    CRITICAL: NEVER generate fake URLs like "211centralillinois.org" or similar. 
+    Only include URLs you find through search that are real and accessible.
+    When in doubt, use "tel:PHONE-NUMBER" instead of guessing website addresses.
+  expected_output: "Structured list of accessible local civic resources with clear next steps"
+  agent: civic_analyst
+  tools: 
+    - search_tool
+
+generate_civic_response:
+  description: |
+    Based on the found resources and user request, generate a warm, helpful response.
+    
+    User request: "{user_message}"
+    Category: "{category}"
+    Urgency: "{urgency_level}"
+    Resources found: {resource_count}
+    
+    Response tone by urgency:
+    - HIGH urgency: "Found {resource_count} options. Start with the first one - they can help quickly."
+    - MEDIUM urgency: "Found {resource_count} resources that can help. Take a look."  
+    - LOW urgency: "Here are some options to explore."
+    
+    Structure:
+    1. Warm acknowledgment of their need
+    2. Summary with urgency-appropriate tone
+    3. Brief highlight of the top 1-2 most accessible resources
+    4. Direct them to the right panel for full details
+    5. Encourage follow-up if needed
+    
+    Use empathetic, plain language. Avoid bureaucratic terms.
+    
+    If no relevant resources found, use:
+    "I'm having trouble finding specific matches right now. For immediate help, call 211 - available 24/7."
+  expected_output: "Warm, conversational response with urgency-appropriate tone and clear next steps"
+  agent: civic_analyst

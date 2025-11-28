@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIVIC RESOURCE AGENT | Peoria</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0A0A0A;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1A1A1A;
+            --text-primary: #F5F5DC;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --accent-red: #DC241F;
+            --accent-blue: #003688;
+            --border: #2A2A2A;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* HEADER */
+        header {
+            border-bottom: 1px solid var(--border);
+            padding: 24px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Space Mono', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        .logo span {
+            color: var(--accent-red);
+        }
+
+        .location {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .location::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent-red);
+        }
+
+        /* MAIN LAYOUT */
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: calc(100vh - 81px);
+        }
+
+        /* LEFT PANEL - CHAT */
+        .chat-panel {
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 48px;
+        }
+
+        .panel-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 3px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 32px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .message {
+            max-width: 90%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--bg-tertiary);
+            padding: 16px 20px;
+            border-left: 2px solid var(--accent-red);
+        }
+
+        .message.agent {
+            align-self: flex-start;
+            padding: 16px 0;
+            border-left: 2px solid var(--accent-blue);
+            padding-left: 20px;
+        }
+
+        .message-text {
+            font-size: 15px;
+            font-weight: 300;
+            line-height: 1.7;
+        }
+
+        .message-time {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
+
+        /* INPUT */
+        .chat-input-container {
+            margin-top: 32px;
+            border-top: 1px solid var(--border);
+            padding-top: 32px;
+        }
+
+        .chat-input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 20px 24px;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 300;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--text-muted);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-hint {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 12px;
+            letter-spacing: 1px;
+        }
+
+        .input-hint kbd {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            margin-left: 4px;
+        }
+
+        /* RIGHT PANEL - RESULTS */
+        .results-panel {
+            padding: 48px;
+            background: var(--bg-secondary);
+            overflow-y: auto;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .results-count {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .result-item {
+            border-bottom: 1px solid var(--border);
+            padding: 32px 0;
+        }
+
+        .result-item:first-of-type {
+            padding-top: 0;
+        }
+
+        .result-category {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--accent-red);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .result-url {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+
+        .result-url:hover {
+            text-decoration: underline;
+        }
+
+        .result-description {
+            font-size: 14px;
+            font-weight: 300;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 24px;
+            margin-top: 16px;
+        }
+
+        .meta-item {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            width: 64px;
+            height: 64px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .empty-state-icon::before {
+            content: '?';
+            font-family: 'Space Mono', monospace;
+            font-size: 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+            font-weight: 300;
+            color: var(--text-secondary);
+            max-width: 280px;
+            line-height: 1.7;
+        }
+
+        /* FOOTER */
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-top: 1px solid var(--border);
+            background: var(--bg-primary);
+            padding: 16px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-left {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .footer-left a {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .footer-left a:hover {
+            color: var(--text-primary);
+        }
+
+        .footer-right {
+            display: flex;
+            gap: 32px;
+        }
+
+        .footer-link {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .footer-link:hover {
+            color: var(--text-primary);
+        }
+
+        /* LOADING STATE */
+        .loading {
+            display: flex;
+            gap: 4px;
+            padding: 16px 0;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-muted);
+            animation: pulse 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes pulse {
+            0%, 80%, 100% { opacity: 0.3; }
+            40% { opacity: 1; }
+        }
+
+        .status-bar {
+            background: var(--bg-tertiary);
+            padding: 8px 48px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .connected {
+            color: #22c55e;
+        }
+
+        .config-button {
+            background: var(--accent-blue);
+            border: none;
+            padding: 4px 12px;
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            color: var(--text-primary);
+            cursor: pointer;
+            margin-left: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar">
+        SYSTEM STATUS: <span id="status">DISCONNECTED</span>
+        <button class="config-button" onclick="showConfig()">CONFIGURE API KEYS</button>
+    </div>
+
+    <header>
+        <div class="logo">CIVIC<span>_</span>RESOURCE<span>_</span>AGENT</div>
+        <div class="location">PEORIA, IL</div>
+    </header>
+
+    <main>
+        <section class="chat-panel">
+            <div class="panel-label">Query</div>
+            
+            <div class="chat-messages" id="messages">
+                <!-- Messages will be added here -->
+            </div>
+
+            <div class="chat-input-container">
+                <input 
+                    type="text" 
+                    class="chat-input" 
+                    placeholder="Ask about local resources, services, programs..."
+                    id="queryInput"
+                >
+                <div class="input-hint">Press <kbd>ENTER</kbd> to search</div>
+            </div>
+        </section>
+
+        <section class="results-panel">
+            <div class="results-header">
+                <div class="panel-label">Results</div>
+                <div class="results-count" id="resultsCount">AWAITING QUERY</div>
+            </div>
+
+            <div id="results">
+                <div class="empty-state">
+                    <div class="empty-state-icon"></div>
+                    <div class="empty-state-title">No query yet</div>
+                    <div class="empty-state-text">Ask a question about local resources, services, or programs in the Peoria area.</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-left">
+            Built by <a href="https://the-aicollective.slack.com" target="_blank">AI Collective Peoria</a> — MIT License
+        </div>
+        <div class="footer-right">
+            <a href="https://github.com/thecuriousnobody/civic-problem-solver" target="_blank" class="footer-link">GitHub</a>
+            <a href="#" class="footer-link">Fork This</a>
+            <a href="#" class="footer-link">How It Works</a>
+        </div>
+    </footer>
+
+    <script>
+        let apiKeys = {
+            anthropic: localStorage.getItem('anthropic_key') || '',
+            serper: localStorage.getItem('serper_key') || ''
+        };
+
+        function showConfig() {
+            const anthropicKey = prompt('Enter your Anthropic API Key:', apiKeys.anthropic);
+            if (anthropicKey !== null) {
+                apiKeys.anthropic = anthropicKey;
+                localStorage.setItem('anthropic_key', anthropicKey);
+                
+                const serperKey = prompt('Enter your Serper API Key (optional):', apiKeys.serper);
+                if (serperKey !== null) {
+                    apiKeys.serper = serperKey;
+                    localStorage.setItem('serper_key', serperKey);
+                }
+                
+                checkConnection();
+            }
+        }
+
+        function checkConnection() {
+            const statusEl = document.getElementById('status');
+            if (apiKeys.anthropic) {
+                statusEl.textContent = 'READY';
+                statusEl.className = 'connected';
+            } else {
+                statusEl.textContent = 'NEED API KEYS';
+                statusEl.className = '';
+            }
+        }
+
+        function getCurrentTime() {
+            return new Date().toLocaleTimeString('en-US', { hour12: false });
+        }
+
+        function addMessage(role, content) {
+            const messagesEl = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${role}`;
+            messageEl.innerHTML = `
+                <div class="message-text">${content}</div>
+                <div class="message-time">${getCurrentTime()}</div>
+            `;
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function showLoading() {
+            const messagesEl = document.getElementById('messages');
+            const loadingEl = document.createElement('div');
+            loadingEl.className = 'message agent';
+            loadingEl.id = 'loading-message';
+            loadingEl.innerHTML = `
+                <div class="loading">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                </div>
+                <div class="message-time">${getCurrentTime()}</div>
+            `;
+            messagesEl.appendChild(loadingEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function hideLoading() {
+            const loadingEl = document.getElementById('loading-message');
+            if (loadingEl) loadingEl.remove();
+        }
+
+        function displayResults(resources) {
+            const resultsEl = document.getElementById('results');
+            const countEl = document.getElementById('resultsCount');
+            
+            if (resources && resources.length > 0) {
+                countEl.textContent = `${resources.length} RESOURCES FOUND`;
+                
+                resultsEl.innerHTML = '<div class="results-list">' + 
+                    resources.map(resource => `
+                        <div class="result-item">
+                            <div class="result-category">${resource.category || 'Resource'}</div>
+                            <div class="result-title">${resource.name}</div>
+                            ${resource.url ? `<a href="${resource.url.startsWith('http') ? resource.url : 'https://' + resource.url}" class="result-url" target="_blank">${resource.url.replace(/^https?:\/\//, '')}</a>` : ''}
+                            <div class="result-description">${resource.description}</div>
+                            <div class="result-meta">
+                                ${resource.contact ? `<span class="meta-item">${resource.contact}</span>` : ''}
+                                ${resource.eligibility ? `<span class="meta-item">${resource.eligibility}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('') + '</div>';
+            } else {
+                countEl.textContent = 'NO RESULTS';
+                resultsEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"></div>
+                        <div class="empty-state-title">No resources found</div>
+                        <div class="empty-state-text">Try rephrasing your query or contact 211 for assistance.</div>
+                    </div>
+                `;
+            }
+        }
+
+        async function sendQuery(message) {
+            if (!apiKeys.anthropic) {
+                showConfig();
+                return;
+            }
+
+            addMessage('user', message);
+            showLoading();
+
+            try {
+                const response = await fetch('http://localhost:8001/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        api_keys: apiKeys
+                    })
+                });
+
+                hideLoading();
+
+                if (!response.ok) throw new Error('Failed to get response');
+
+                const data = await response.json();
+                addMessage('agent', data.response);
+                displayResults(data.resources);
+
+            } catch (error) {
+                hideLoading();
+                addMessage('agent', "I'm having trouble connecting. Please check your API keys and backend connection.");
+                console.error('Error:', error);
+            }
+        }
+
+        // Event listeners
+        const input = document.getElementById('queryInput');
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && this.value.trim()) {
+                const query = this.value.trim();
+                this.value = '';
+                sendQuery(query);
+            }
+        });
+
+        // Check initial connection
+        checkConnection();
+
+        // Welcome message
+        addMessage('agent', 'Welcome to Civic Resource Agent! I help find local resources in Peoria. Ask me about housing, food, transportation, healthcare, employment, or other civic services.');
+    </script>
+</body>
+</html>
