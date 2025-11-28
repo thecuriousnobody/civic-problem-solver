@@ -28,6 +28,10 @@ import json
 from datetime import datetime
 from contextlib import asynccontextmanager
 
+import sys
+import os
+# Add the agents directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'agents'))
 from civic_crewai_system import run_civic_chat, run_civic_chat_streaming
 
 # Configure logging

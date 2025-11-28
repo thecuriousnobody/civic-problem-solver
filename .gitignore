@@ -1,5 +1,6 @@
 # Environment files
 .env
+.env.demo
 .env.local
 .env.production
 .env.test

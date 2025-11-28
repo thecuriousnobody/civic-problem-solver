@@ -36,6 +36,12 @@ from concurrent.futures import ThreadPoolExecutor
 from crewai.flow.flow import Flow, listen, start
 from crewai import Agent, Task, Crew, LLM
 from crewai_tools import SerperDevTool
+from crewai.events import (
+    ToolUsageStartedEvent, 
+    ToolUsageFinishedEvent,
+    ToolUsageErrorEvent,
+    BaseEventListener
+)
 from dotenv import load_dotenv
 
 # Database imports (we'll add these)
@@ -44,6 +50,17 @@ import hashlib
 
 # Load environment
 load_dotenv()
+
+# Initialize module-level tool usage listener for transparency
+_global_tool_listener: Optional['CivicToolUsageListener'] = None
+
+# Create a global instance that gets automatically registered
+def _create_global_listener():
+    """Create and register global tool listener if not exists"""
+    global _global_tool_listener
+    if _global_tool_listener is None:
+        _global_tool_listener = CivicToolUsageListener()
+    return _global_tool_listener
 
 # Configure logging with detailed performance tracking
 logging.basicConfig(
@@ -107,6 +124,122 @@ class PerformanceTracker:
         return 0
 
 # ============================================================================
+# TOOL USAGE EVENT LISTENER
+# ============================================================================
+
+class CivicToolUsageListener(BaseEventListener):
+    """Custom event listener for CrewAI tool usage events to provide real-time transparency"""
+    
+    def __init__(self, stream_callback: callable = None):
+        """Initialize with optional streaming callback for real-time updates"""
+        super().__init__()
+        self.stream_callback = stream_callback
+        self.tool_usage_events = []
+        
+    def setup_listeners(self, crewai_event_bus):
+        """Setup event listeners using CrewAI's event bus pattern"""
+        
+        @crewai_event_bus.on(ToolUsageStartedEvent)
+        def on_tool_start(source, event):
+            """Handle when a tool starts being used"""
+            try:
+                tool_name = getattr(event, 'tool_name', getattr(event, 'tool', 'Unknown Tool'))
+                tool_input = getattr(event, 'input', getattr(event, 'tool_input', ''))
+                
+                # Create user-friendly message
+                if 'serper' in str(tool_name).lower() or 'search' in str(tool_name).lower():
+                    message = f"🔍 Searching for local resources..."
+                    if tool_input:
+                        # Extract search terms for transparency
+                        search_preview = str(tool_input)[:50]
+                        if len(str(tool_input)) > 50:
+                            search_preview += "..."
+                        message = f"🔍 Searching: {search_preview}"
+                else:
+                    # Use tool name directly as requested
+                    message = f"🔧 Using tool: {tool_name}"
+                    
+                # Store event
+                self.tool_usage_events.append({
+                    "type": "tool_started",
+                    "tool": str(tool_name),
+                    "input": str(tool_input)[:100],  # Truncate long inputs
+                    "message": message,
+                    "timestamp": datetime.now().isoformat()
+                })
+                
+                # Stream to frontend if callback available
+                if self.stream_callback:
+                    self.stream_callback(message)
+                    
+                logger.info(f"🔧 TOOL STARTED: {tool_name}")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Tool start event handling failed: {e}")
+        
+        @crewai_event_bus.on(ToolUsageFinishedEvent)
+        def on_tool_finish(source, event):
+            """Handle when a tool finishes execution"""
+            try:
+                tool_name = getattr(event, 'tool_name', getattr(event, 'tool', 'Unknown Tool'))
+                result_preview = str(getattr(event, 'result', getattr(event, 'output', '')))[:100]
+                
+                # Create user-friendly completion message
+                if 'serper' in str(tool_name).lower() or 'search' in str(tool_name).lower():
+                    message = f"✅ Search completed - found local resource information"
+                else:
+                    message = f"✅ Tool completed: {tool_name}"
+                
+                # Store event
+                self.tool_usage_events.append({
+                    "type": "tool_finished", 
+                    "tool": str(tool_name),
+                    "result_preview": result_preview,
+                    "message": message,
+                    "timestamp": datetime.now().isoformat()
+                })
+                
+                # Stream to frontend if callback available
+                if self.stream_callback:
+                    self.stream_callback(message)
+                    
+                logger.info(f"✅ TOOL COMPLETED: {tool_name}")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Tool finish event handling failed: {e}")
+        
+        @crewai_event_bus.on(ToolUsageErrorEvent)
+        def on_tool_error(source, event):
+            """Handle when a tool encounters an error"""
+            try:
+                tool_name = getattr(event, 'tool_name', getattr(event, 'tool', 'Unknown Tool'))
+                error = getattr(event, 'error', getattr(event, 'exception', 'Unknown error'))
+                
+                # Create user-friendly error message
+                if 'serper' in str(tool_name).lower() or 'search' in str(tool_name).lower():
+                    message = f"⚠️ Search tool encountered an issue - trying alternative approach"
+                else:
+                    message = f"⚠️ Tool error: {tool_name} - retrying"
+                
+                # Store event
+                self.tool_usage_events.append({
+                    "type": "tool_error",
+                    "tool": str(tool_name), 
+                    "error": str(error)[:100],  # Truncate long errors
+                    "message": message,
+                    "timestamp": datetime.now().isoformat()
+                })
+                
+                # Stream to frontend if callback available
+                if self.stream_callback:
+                    self.stream_callback(message)
+                    
+                logger.warning(f"❌ TOOL ERROR: {tool_name} - {error}")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Tool error event handling failed: {e}")
+
+# ============================================================================
 # STATE MODEL
 # ============================================================================
 
@@ -148,6 +281,10 @@ class CivicState(BaseModel):
     # Streaming support
     enable_streaming: bool = False
     stream_callback: Optional[callable] = Field(default=None, exclude=True)
+    
+    # Tool usage events for transparency
+    tool_usage_listener: Optional[CivicToolUsageListener] = Field(default=None, exclude=True)
+    tool_events: List[Dict] = Field(default_factory=list)
     
     class Config:
         arbitrary_types_allowed = True
@@ -341,6 +478,13 @@ class CivicCrewAISystem(Flow[CivicState]):
         
         if self.state.enable_streaming and self.state.stream_callback:
             self.state.stream_callback("🚀 Initializing civic resource system...")
+            # Initialize tool usage listener for transparency
+            self.state.tool_usage_listener = CivicToolUsageListener(
+                stream_callback=self.state.stream_callback
+            )
+            # Set global listener for CrewAI event system
+            global _global_tool_listener
+            _global_tool_listener = self.state.tool_usage_listener
         
         # Set temporal context
         now = datetime.now(timezone.utc)
@@ -437,6 +581,13 @@ Respond in JSON format:
             tasks=[decision_task], 
             verbose=True  # Enable verbose for detailed monitoring
         )
+        
+        # Register event listener for tool usage transparency
+        if self.state.tool_usage_listener:
+            from crewai.events import crewai_event_bus
+            self.state.tool_usage_listener.setup_listeners(crewai_event_bus)
+            logger.info("🔧 Event listener registered for tool transparency")
+        
         result = crew.kickoff()
         crew_time = time.time() - crew_start
         logger.info(f"🧠 Intake agent analysis completed in {crew_time:.3f}s")
@@ -544,23 +695,28 @@ Location: {self.state.location}
 User Message: "{self.state.user_message}"
 Search Query: {self.state.search_query}
 
-## YOUR TASK
+## CRITICAL: YOU MUST USE THE SEARCH TOOL
 
-Use the search tool to find civic resources for this need. Focus on:
+**MANDATORY**: You MUST use the web search tool to find current, local civic resources. Do NOT use static knowledge or make assumptions.
 
-PRIORITIZE:
+**REQUIRED ACTIONS**:
+1. **FIRST**: Use the search tool with this exact query: "{self.state.search_query}"
+2. **THEN**: Use the search tool for specific local organizations like "Peoria rescue mission emergency housing", "Salvation Army Peoria housing", etc.
+3. **FINALLY**: Compile the search results into the response format below
+
+**SEARCH FOCUS**:
 - Local organizations (Peoria, Tazewell, Woodford counties)
 - Programs with NO or LOW barriers to entry  
 - Places with real phone numbers people can call
 - Programs currently accepting applications
 - Walk-in services or same-day help
 
-AVOID:
+**AVOID**:
 - National hotlines only (unless 211 or crisis line)
 - Programs requiring extensive documentation to start
 - Outdated or closed programs
 
-After searching, provide a structured summary of the best resources found."""
+**IMPORTANT**: You must perform live web searches. Do not rely on pre-existing knowledge. Use the search tool multiple times if needed to find comprehensive, current information."""
 
         # Create search task
         search_task = Task(
@@ -579,6 +735,12 @@ After searching, provide a structured summary of the best resources found."""
                 tasks=[search_task], 
                 verbose=True  # Enable verbose for monitoring
             )
+            
+            # Register event listener for tool usage transparency 
+            if self.state.tool_usage_listener:
+                from crewai.events import crewai_event_bus
+                self.state.tool_usage_listener.setup_listeners(crewai_event_bus)
+                logger.info("🔍 Event listener registered for search tool transparency")
             
             # Execute search - always use standard mode for now
             result = crew.kickoff()
@@ -624,6 +786,12 @@ After searching, provide a structured summary of the best resources found."""
             verbose=True  # Enable verbose for monitoring
         )
         
+        # Register event listener for tool usage transparency
+        if self.state.tool_usage_listener:
+            from crewai.events import crewai_event_bus
+            self.state.tool_usage_listener.setup_listeners(crewai_event_bus)
+            logger.info("💬 Event listener registered for response tool transparency")
+        
         # Execute response generation - always use standard mode for now
         result = crew.kickoff()
         response_time = time.time() - response_start
@@ -636,6 +804,11 @@ After searching, provide a structured summary of the best resources found."""
             asyncio.create_task(self.memory.save_conversation(self.state))
         except:
             logger.warning("⚠️ Could not save to memory")
+        
+        # Collect tool usage events if available
+        if self.state.tool_usage_listener:
+            self.state.tool_events = self.state.tool_usage_listener.tool_usage_events
+            logger.info(f"📊 Captured {len(self.state.tool_events)} tool usage events")
         
         # Complete performance tracking
         total_time = self.state.performance_tracker.finish("for civic conversation")
@@ -1192,6 +1365,7 @@ async def run_civic_chat(message: str, session_id: str) -> Dict[str, Any]:
             "response_source": final_state.response_source,
             "execution_time_ms": final_state.execution_time_ms,
             "step_timings": final_state.step_timings,
+            "tool_events": final_state.tool_events,  # Include tool usage events
             "success": True
         }
     
@@ -1264,6 +1438,7 @@ async def run_civic_chat_streaming(message: str, session_id: str, stream_callbac
             "response_source": final_state.response_source,
             "execution_time_ms": final_state.execution_time_ms,
             "step_timings": final_state.step_timings,
+            "tool_events": final_state.tool_events,  # Include tool usage events
             "conversation_stage": "completed",
             "timestamp": datetime.now().isoformat()
         }

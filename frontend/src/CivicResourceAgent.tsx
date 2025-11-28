@@ -746,8 +746,19 @@ const CivicResourceAgent: React.FC = () => {
             <div className="thinking-panel">
               <div className="thinking-header">
                 🤖 Agent Thinking Process
-                <div className="thinking-status">
-                  {isLoading ? "Processing..." : "Complete"}
+                <div className="thinking-controls">
+                  <div className="thinking-status">
+                    {isLoading ? "Processing..." : "Complete"}
+                  </div>
+                  {!isLoading && streamingEvents.length > 0 && (
+                    <button 
+                      className="thinking-clear-btn"
+                      onClick={() => setStreamingEvents([])}
+                      title="Clear thinking process"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="thinking-content">
