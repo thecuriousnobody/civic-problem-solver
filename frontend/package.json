@@ -1,7 +1,12 @@
 {
   "name": "civic-problem-solver-frontend",
   "version": "1.0.0",
-  "description": "React frontend for Civic Problem Solver",
+  "description": "React frontend for Civic Problem Solver with AI transparency",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thecuriousnobody/civic-problem-solver.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --host",

@@ -1,8 +1,20 @@
 # Civic Problem Solver
 
-**Open-source AI concierge for local resource discovery**
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
+[![CrewAI](https://img.shields.io/badge/CrewAI-Latest-orange.svg)](https://crewai.com)
 
-Solving civic information fragmentation through intelligent, geo-fenced resource matching. Born from the Peoria AI Collective's December 3rd, 2025 civic problem-solving initiative.
+**Open-source AI concierge for local resource discovery with radical transparency**
+
+🔥 **Features:**
+- **Streaming AI Transparency** - Watch agents think in real-time
+- **2-Agent CrewAI System** - Intake + Resource specialists
+- **Dual-Panel UI** - Chat + persistent resource accumulation
+- **Local Focus** - Geo-fenced resource matching for your community
+- **Production Ready** - Comprehensive testing & monitoring
+
+Born from the Peoria AI Collective's civic problem-solving initiative.
 
 ## The Problem
 
@@ -91,11 +103,44 @@ This is civic infrastructure, not a startup. Fork this repository and localize f
 
 ## Contributing
 
-Built live during Peoria AI Collective meetings. Join us:
-- **Slack**: [AI Collective Peoria]
+We welcome contributions! This project is designed to be replicated and adapted for communities worldwide.
+
+### How to Contribute:
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Make your changes** and test thoroughly
+4. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+5. **Push to the branch** (`git push origin feature/amazing-feature`)
+6. **Open a Pull Request**
+
+### Ways to Help:
+- 🐛 **Bug reports** - Found something broken? Let us know!
+- ✨ **Feature requests** - Ideas for improvements
+- 📖 **Documentation** - Help others understand and use the system
+- 🌍 **Localization** - Adapt for your community's resources
+- 🧪 **Testing** - Help ensure quality across different environments
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## Community
+
+Built live during Peoria AI Collective meetings. Join the conversation:
+- **Slack**: [AI Collective Peoria](https://the-aicollective.slack.com)
 - **Meetings**: Every 1st Wednesday, 6 PM CT
-- **Issues**: Critique, add to, and push back on design ideas
+- **Issues**: [GitHub Issues](https://github.com/thecuriousnobody/civic-problem-solver/issues)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- **Peoria AI Collective** - Community-driven civic innovation
+- **CrewAI** - Multi-agent framework powering the system
+- **Distillery Labs** - UI patterns and inspiration for transparency
 
 ---
 
-*This project abstracts successful patterns from the [Distillery Labs Intake AI](https://github.com/thecuriousnobody/distillery-intake-ai) system.*
+**🌟 Star this repo if it helps your community!**
+
+*Built with ❤️ for civic good. Made to be replicated, not monetized.*
