@@ -41,8 +41,8 @@ function getCurrentTime() {
 }
 
 function linkifyText(text: string) {
-  // More comprehensive regex to capture full URLs with paths
-  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|www\.[^\s<>"{}|\\^`\[\]]+)/g;
+  // Comprehensive regex to capture URLs with paths AND plain domains
+  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|www\.[^\s<>"{}|\\^`\[\]]+|[a-zA-Z0-9][a-zA-Z0-9-]*\.(?:com|org|net|edu|gov|mil|info|biz|co|io)[^\s<>"{}|\\^`\[\]]*)/g;
   
   return text.split(urlRegex).map((part, index) => {
     if (urlRegex.test(part)) {
@@ -70,9 +70,8 @@ function linkifyText(text: string) {
 
 // Also linkify agent responses 
 function linkifyMarkdown(text: string) {
-  // Simple, reliable URL to markdown conversion
-  // Match complete URLs including paths, but stop at whitespace or common punctuation
-  const urlRegex = /(https?:\/\/[^\s\])}]+|www\.[^\s\])}]+)/g;
+  // Simple, reliable URL to markdown conversion including plain domains
+  const urlRegex = /(https?:\/\/[^\s\])}]+|www\.[^\s\])}]+|[a-zA-Z0-9][a-zA-Z0-9-]*\.(?:com|org|net|edu|gov|mil|info|biz|co|io)[^\s\])}]*)/g;
   
   return text.replace(urlRegex, (url) => {
     // Don't double-process if already a markdown link

@@ -923,6 +923,11 @@ Search Query: {self.state.search_query}
         if current_resource and 'name' in current_resource:
             resources.append(current_resource)
             
+        # Debug logging
+        logger.info(f"🔍 Parsed {len(resources)} resources from search results for category '{self.state.need_category}'")
+        for i, res in enumerate(resources):
+            logger.info(f"  Resource {i+1}: {res.get('name', 'Unnamed')}")
+            
         # Clean up resources and add missing fields
         for resource in resources:
             if not resource.get('location'):
@@ -1098,50 +1103,8 @@ Search Query: {self.state.search_query}
                 }
             ])
             
-        # Only add fallback employment resources if we didn't parse any specific resources
-        elif "employment" in self.state.need_category and len(resources) == 0:
-            resources.extend([
-                {
-                    "name": "Small Business Development Center - Bradley University",
-                    "category": "Business Development",
-                    "description": "Free business consulting, startup guidance, business planning, and market research for entrepreneurs and small businesses",
-                    "contact": "(309) 677-2992",
-                    "url": "https://www.bradley.edu/sbdc",
-                    "next_step": "Call to schedule a free consultation with a business advisor",
-                    "location": "1501 W Bradley Ave, Peoria, IL",
-                    "eligibility": "Open to all entrepreneurs and small business owners"
-                },
-                {
-                    "name": "SCORE Mentors Central Illinois",
-                    "category": "Business Mentorship",
-                    "description": "Free mentoring and workshops from experienced business professionals. Specializes in restaurant, retail, and service businesses",
-                    "contact": "(309) 676-0755",
-                    "url": "https://www.score.org/landoflincoln",
-                    "next_step": "Request a free mentor match online or attend a workshop",
-                    "location": "Peoria area meetings and online",
-                    "eligibility": "Free for all entrepreneurs and business owners"
-                },
-                {
-                    "name": "Greater Peoria Economic Development Council",
-                    "category": "Business Resources",
-                    "description": "Local business support, networking, and economic development resources for Central Illinois businesses",
-                    "contact": "(309) 495-5910",
-                    "url": "tel:309-495-5910",  # Direct call - website not found
-                    "next_step": "Contact for business development resources and local connections",
-                    "location": "100 SW Water Street, Peoria, IL",
-                    "eligibility": "Businesses located in or moving to Greater Peoria area"
-                },
-                {
-                    "name": "Illinois Small Business Development Center Network",
-                    "category": "Statewide Business Support",
-                    "description": "Comprehensive business development services, funding assistance, and startup resources across Illinois",
-                    "contact": "(217) 524-5856",
-                    "url": "https://sbdc.siu.edu",
-                    "next_step": "Find your local center and schedule consulting services",
-                    "location": "Statewide network with Peoria representation",
-                    "eligibility": "Illinois-based businesses and entrepreneurs"
-                }
-            ])
+        # Skip employment category fallbacks - they are business-focused, not job training focused
+        # Let parsed resources show through instead
         
         else:
             # For other categories, provide general 211 resource
