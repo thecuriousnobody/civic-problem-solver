@@ -697,11 +697,10 @@ Search Query: {self.state.search_query}
 
 ## CRITICAL: YOU MUST USE THE SEARCH TOOL
 
-**SIMPLIFIED SEARCH**: Perform exactly 3 targeted searches maximum:
+**STREAMLINED SEARCH**: Perform 1-2 targeted searches maximum:
 
-1. **PRIMARY**: "{self.state.search_query}"
-2. **LOCAL**: "Peoria Illinois {self.state.need_category} assistance programs"  
-3. **GOVERNMENT**: "Illinois {self.state.need_category} benefits eligibility"
+1. **PRIMARY**: "{self.state.search_query}" (always do this one)
+2. **LOCAL** (if needed): "Peoria Illinois {self.state.need_category} assistance programs"
 
 **FOCUS ON**:
 - Real phone numbers and addresses in Peoria area
@@ -711,7 +710,7 @@ Search Query: {self.state.search_query}
 
 **OUTPUT GOAL**: Comprehensive resource list with complete contact information that answers the user's specific need.
 
-**LIMIT**: Use search tool exactly 3 times maximum. Quality over quantity."""
+**LIMIT**: Use search tool maximum 2 times. One perfect search is better than multiple searches."""
 
         # Create search task
         search_task = Task(

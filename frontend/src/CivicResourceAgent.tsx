@@ -41,8 +41,8 @@ function getCurrentTime() {
 }
 
 function linkifyText(text: string) {
-  // Regex to detect URLs
-  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+  // More comprehensive regex to capture full URLs with paths
+  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|www\.[^\s<>"{}|\\^`\[\]]+)/g;
   
   return text.split(urlRegex).map((part, index) => {
     if (urlRegex.test(part)) {
@@ -68,6 +68,31 @@ function linkifyText(text: string) {
   });
 }
 
+// Also linkify agent responses 
+function linkifyMarkdown(text: string) {
+  // Convert URLs to markdown links for ReactMarkdown, and clean up markdown formatting
+  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|www\.[^\s<>"{}|\\^`\[\]]+)/g;
+  
+  // First handle cases like "**Website: https://example.com**" 
+  let processedText = text.replace(/\*\*([^*]*)(https?:\/\/[^\s<>"{}|\\^`\[\]]+|www\.[^\s<>"{}|\\^`\[\]]+)([^*]*)\*\*/g, 
+    (match, before, url, after) => {
+      const href = url.startsWith('http') ? url : `https://${url}`;
+      return `**${before}[${url}](${href})${after}**`;
+    });
+  
+  // Then handle standalone URLs
+  processedText = processedText.replace(urlRegex, (url) => {
+    // Skip if already processed as part of markdown link
+    if (processedText.includes(`[${url}](`) || processedText.includes(`](${url})`)) {
+      return url;
+    }
+    const href = url.startsWith('http') ? url : `https://${url}`;
+    return `[${url}](${href})`;
+  });
+  
+  return processedText;
+}
+
 const CivicResourceAgent: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -83,72 +108,8 @@ const CivicResourceAgent: React.FC = () => {
     // Generate session ID
     return `civic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   });
-  // Default helpful resources shown immediately
-  const defaultResources: Resource[] = [
-    {
-      name: "Distillery Labs",
-      category: "Innovation & Entrepreneurship",
-      description: "Central Illinois innovation hub providing startup support, co-working space, and technology resources for entrepreneurs and growing businesses.",
-      contact: "(309) 495-1717",
-      url: "https://distillerylabs.com",
-      next_step: "Visit for co-working, mentorship, and startup programs",
-      location: "410 Hamilton Blvd, Peoria, IL",
-      eligibility: "Open to entrepreneurs and small businesses"
-    },
-    {
-      name: "Greater Peoria Economic Development Council",
-      category: "Business Development",
-      description: "Leading economic development organization supporting business growth, expansion, and relocation in Greater Peoria area.",
-      contact: "(309) 495-5910",
-      url: "https://greaterpeoriaedc.org",
-      next_step: "Contact for business development resources and incentives",
-      location: "100 SW Water Street, Peoria, IL",
-      eligibility: "Businesses in Greater Peoria region"
-    },
-    {
-      name: "Peoria Area Chamber of Commerce",
-      category: "Business Networking",
-      description: "Premier business network providing advocacy, networking events, and business development resources for Central Illinois.",
-      contact: "(309) 676-0755",
-      url: "https://peoriachamber.org",
-      next_step: "Join for networking and business growth opportunities",
-      location: "100 SW Water Street, Peoria, IL",
-      eligibility: "All businesses welcome"
-    },
-    {
-      name: "Heart of Illinois United Way",
-      category: "Community Resources",
-      description: "Central hub connecting residents with health, education, and financial stability resources throughout Central Illinois.",
-      contact: "(309) 674-1010",
-      url: "https://uwheart.org",
-      next_step: "Call for comprehensive resource navigation",
-      location: "331 Fulton Street, Peoria, IL",
-      eligibility: "Available to all residents"
-    },
-    {
-      name: "211 Central Illinois",
-      category: "General Resources",
-      description: "Comprehensive information and referral service connecting people with local resources for basic needs and crisis support.",
-      contact: "Dial 2-1-1",
-      url: "https://211centralillinois.org",
-      next_step: "Call 211 anytime for personalized assistance",
-      location: "Central Illinois",
-      eligibility: "Free for all residents - 24/7 availability"
-    },
-    {
-      name: "Small Business Development Center - Bradley University",
-      category: "Business Consulting",
-      description: "Free business consulting, training, and resources for entrepreneurs and small business owners throughout Central Illinois.",
-      contact: "(309) 677-2992",
-      url: "https://bradley.edu/sbdc",
-      next_step: "Schedule free consultation with business advisor",
-      location: "1501 W Bradley Ave, Peoria, IL",
-      eligibility: "Free for all entrepreneurs and small businesses"
-    }
-  ];
-
-  // Accumulated resources that build up over time (like Distillery Labs pattern)
-  const [accumulatedResources, setAccumulatedResources] = useState<Resource[]>(defaultResources);
+  // Accumulated resources found by the agent (starts empty)
+  const [accumulatedResources, setAccumulatedResources] = useState<Resource[]>([]);
   const [resourcesUpdated, setResourcesUpdated] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [showPerformance, setShowPerformance] = useState(false);
@@ -162,6 +123,9 @@ const CivicResourceAgent: React.FC = () => {
   const [streamingMode, setStreamingMode] = useState(true); // Enable streaming by default
   const [streamingEvents, setStreamingEvents] = useState<string[]>([]);
   const [showStreamingPanel, setShowStreamingPanel] = useState(false);
+  const [thinkingLogCollapsed, setThinkingLogCollapsed] = useState(false);
+  const [allStreamingEvents, setAllStreamingEvents] = useState<{timestamp: string, events: string[]}[]>([]);
+  const [thinkingPanelExpanded, setThinkingPanelExpanded] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -351,11 +315,17 @@ const CivicResourceAgent: React.FC = () => {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      // Keep thinking panel visible for 3 seconds after completion
-      setTimeout(() => {
-        setStreamingEvents([]);
-        setShowStreamingPanel(false);
-      }, 3000);
+      
+      // Save the completed thinking process to permanent log
+      if (streamingEvents.length > 0) {
+        setAllStreamingEvents(prev => [...prev, {
+          timestamp: getCurrentTime(),
+          events: [...streamingEvents]
+        }]);
+      }
+      
+      // Keep current events visible and panel open
+      setShowStreamingPanel(true);
     }
   };
 
@@ -545,17 +515,11 @@ const CivicResourceAgent: React.FC = () => {
   const renderResourcesModal = () => {
     if (!showResources || accumulatedResources.length === 0) return null;
 
-    const defaultCount = defaultResources.length;
-    const newCount = accumulatedResources.length - defaultCount;
-
     return (
       <div className="resources-modal-overlay">
         <div className="resources-modal">
           <div className="resources-modal-header">
-            <h3>
-              Central IL Resources ({accumulatedResources.length})
-              {newCount > 0 && <span style={{color: 'var(--accent-blue)', marginLeft: '8px'}}>+{newCount} new</span>}
-            </h3>
+            <h3>Found Resources ({accumulatedResources.length})</h3>
             <button onClick={() => setShowResources(false)}>✕</button>
           </div>
           
@@ -608,6 +572,70 @@ const CivicResourceAgent: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderThinkingLogModal = () => {
+    if (thinkingLogCollapsed || allStreamingEvents.length === 0) return null;
+
+    return (
+      <div className="resources-modal-overlay">
+        <div className="resources-modal">
+          <div className="resources-modal-header">
+            <h3>Agent Thinking Log ({allStreamingEvents.length} conversations)</h3>
+            <button onClick={() => setThinkingLogCollapsed(true)}>✕</button>
+          </div>
+          
+          <div className="resources-modal-content">
+            <div style={{ fontFamily: 'Space Mono, monospace', maxHeight: '60vh', overflowY: 'auto' }}>
+              {allStreamingEvents.map((session, sessionIndex) => (
+                <div key={sessionIndex} style={{ 
+                  marginBottom: '24px', 
+                  border: '1px solid var(--border)', 
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: '8px',
+                  padding: '16px'
+                }}>
+                  <div style={{ 
+                    color: 'var(--text-secondary)', 
+                    fontSize: '12px', 
+                    marginBottom: '12px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}>
+                    Session {sessionIndex + 1} • {session.timestamp}
+                  </div>
+                  
+                  {session.events.map((event, eventIndex) => (
+                    <div key={eventIndex} style={{
+                      padding: '8px 12px',
+                      margin: '4px 0',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      lineHeight: '1.4'
+                    }}>
+                      <span style={{ color: 'var(--accent-blue)' }}>•</span> {event}
+                    </div>
+                  ))}
+                </div>
+              ))}
+              
+              <div style={{ 
+                marginTop: '24px', 
+                padding: '16px', 
+                background: 'var(--bg-secondary)', 
+                fontSize: '11px', 
+                color: 'var(--text-muted)',
+                textAlign: 'center'
+              }}>
+                💡 This log shows the AI agent's step-by-step thinking process for transparency and debugging
+              </div>
             </div>
           </div>
         </div>
@@ -730,6 +758,11 @@ const CivicResourceAgent: React.FC = () => {
             </button>
           </>
         )}
+        {allStreamingEvents.length > 0 && (
+          <button onClick={() => setThinkingLogCollapsed(!thinkingLogCollapsed)} className="config-button" style={{ marginLeft: '8px' }}>
+            THINKING LOG ({allStreamingEvents.length})
+          </button>
+        )}
       </div>
 
       <header>
@@ -785,7 +818,7 @@ const CivicResourceAgent: React.FC = () => {
                         )
                       }}
                     >
-                      {message.content}
+                      {linkifyMarkdown(message.content)}
                     </ReactMarkdown>
                   ) : (
                     <span>{linkifyText(message.content)}</span>
@@ -836,6 +869,13 @@ const CivicResourceAgent: React.FC = () => {
                   <div className="thinking-status">
                     {isLoading ? "Processing..." : "Complete"}
                   </div>
+                  <button 
+                    className="thinking-expand-btn"
+                    onClick={() => setThinkingPanelExpanded(!thinkingPanelExpanded)}
+                    title={thinkingPanelExpanded ? "Collapse details" : "Expand details"}
+                  >
+                    {thinkingPanelExpanded ? "−" : "+"}
+                  </button>
                   {!isLoading && streamingEvents.length > 0 && (
                     <button 
                       className="thinking-clear-btn"
@@ -847,31 +887,48 @@ const CivicResourceAgent: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className="thinking-content">
-                {streamingEvents.length > 0 ? (
-                  streamingEvents.map((event, index) => (
-                    <div key={index} className="thinking-step">
-                      <div className="thinking-step-icon">•</div>
-                      <div className="thinking-step-text">{event}</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="thinking-step">
-                    <div className="thinking-step-icon">⏳</div>
-                    <div className="thinking-step-text">Analyzing your request...</div>
+              
+              {/* Collapsed view - just show summary */}
+              {!thinkingPanelExpanded ? (
+                <div className="thinking-content-collapsed">
+                  <div className="thinking-summary" style={{
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                    fontFamily: 'inherit',
+                    padding: '8px 16px'
+                  }}>
+                    {isLoading ? "Processing your request..." : 
+                     streamingEvents.length > 0 ? `Completed ${streamingEvents.length} steps` : "Ready"}
                   </div>
-                )}
-                {isLoading && (
-                  <div className="thinking-step thinking-active">
-                    <div className="loading-dots">
-                      <div className="dot"></div>
-                      <div className="dot"></div>
-                      <div className="dot"></div>
+                </div>
+              ) : (
+                /* Expanded view - show all details */
+                <div className="thinking-content">
+                  {streamingEvents.length > 0 ? (
+                    streamingEvents.map((event, index) => (
+                      <div key={index} className="thinking-step">
+                        <div className="thinking-step-icon">•</div>
+                        <div className="thinking-step-text">{event}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="thinking-step">
+                      <div className="thinking-step-icon">⏳</div>
+                      <div className="thinking-step-text">Analyzing your request...</div>
                     </div>
-                    <div className="thinking-step-text">Working...</div>
-                  </div>
-                )}
-              </div>
+                  )}
+                  {isLoading && (
+                    <div className="thinking-step thinking-active">
+                      <div className="loading-dots">
+                        <div className="dot"></div>
+                        <div className="dot"></div>
+                        <div className="dot"></div>
+                      </div>
+                      <div className="thinking-step-text">Working...</div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -896,17 +953,22 @@ const CivicResourceAgent: React.FC = () => {
         <section className="results-panel">
           <div className="results-header">
             <div className="panel-label">
-              Central IL Resources ({accumulatedResources.length})
-              {accumulatedResources.length > defaultResources.length && (
-                <span style={{color: 'var(--accent-blue)', marginLeft: '8px', fontSize: '10px'}}>
-                  +{accumulatedResources.length - defaultResources.length} new
-                </span>
-              )}
+              Found Resources ({accumulatedResources.length})
             </div>
           </div>
           
           <div className="results-list">
-            {accumulatedResources.map((resource, index) => (
+            {accumulatedResources.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                color: 'var(--text-muted)', 
+                padding: '40px 20px',
+                fontSize: '14px'
+              }}>
+                Resources found by the AI agent will appear here as you chat
+              </div>
+            ) : (
+              accumulatedResources.map((resource, index) => (
               <div key={index} className="result-item">
                 <div className="result-category">{resource.category}</div>
                 <div className="result-title">{resource.name}</div>
@@ -952,7 +1014,8 @@ const CivicResourceAgent: React.FC = () => {
                   )}
                 </div>
               </div>
-            ))}
+            ))
+            )}
           </div>
         </section>
       </main>
@@ -973,6 +1036,7 @@ const CivicResourceAgent: React.FC = () => {
       </footer>
 
       {renderConfigModal()}
+      {renderThinkingLogModal()}
       {renderPerformanceModal()}
     </div>
   );
