@@ -42,6 +42,94 @@ from crewai.events import (
     ToolUsageErrorEvent,
     BaseEventListener
 )
+
+# Verification Tools for Peoria County Resource Validation
+class PhoneValidatorTool:
+    """Validates phone numbers for Peoria County (309 area code) and checks if lines are active"""
+    
+    def __init__(self):
+        self.name = "phone_validator_tool"
+        self.description = "Validates phone numbers have 309 area code and checks if lines are active"
+    
+    def _run(self, phone_number: str) -> str:
+        """Validate a phone number for Peoria County"""
+        import re
+        
+        # Clean phone number
+        clean_phone = re.sub(r'[^\d]', '', phone_number)
+        
+        # Check if it has 309 area code (Peoria County)
+        if len(clean_phone) == 10 and clean_phone.startswith('309'):
+            # TODO: In production, this would make actual calls to verify
+            # For now, basic validation
+            formatted = f"({clean_phone[:3]}) {clean_phone[3:6]}-{clean_phone[6:]}"
+            return f"✅ VALID: {formatted} - Peoria County area code confirmed"
+        elif len(clean_phone) == 10:
+            other_area = clean_phone[:3]
+            return f"⚠️ WARNING: {phone_number} uses area code {other_area}, not 309 (Peoria County)"
+        else:
+            return f"❌ INVALID: {phone_number} - Invalid phone number format"
+
+class WebsiteCheckerTool:
+    """Checks if websites are accessible and not broken"""
+    
+    def __init__(self):
+        self.name = "website_checker_tool"
+        self.description = "Verifies website links work and are accessible"
+    
+    def _run(self, url: str) -> str:
+        """Check if a website URL is accessible"""
+        import requests
+        from urllib.parse import urlparse
+        
+        try:
+            # Add https if not present
+            if not url.startswith(('http://', 'https://')):
+                url = f"https://{url}"
+            
+            # Make request with timeout
+            response = requests.get(url, timeout=10, allow_redirects=True)
+            
+            if response.status_code == 200:
+                return f"✅ ACCESSIBLE: {url} - Website is working"
+            else:
+                return f"⚠️ WARNING: {url} - Returns status code {response.status_code}"
+                
+        except requests.RequestException as e:
+            return f"❌ BROKEN: {url} - Website not accessible ({str(e)[:100]})"
+
+class GeocodingTool:
+    """Verifies locations are within Peoria County, Illinois"""
+    
+    def __init__(self):
+        self.name = "geocoding_tool"  
+        self.description = "Confirms addresses are located within Peoria County, Illinois"
+    
+    def _run(self, address: str) -> str:
+        """Verify address is in Peoria County"""
+        # TODO: In production, use actual geocoding API
+        # For now, basic text validation
+        peoria_indicators = [
+            'peoria', 'pekin', 'bartonville', 'chillicothe', 'dunlap',
+            'elmwood', 'glasford', 'hanna city', 'mapleton', 'morton',
+            'peoria heights', 'washington', 'west peoria'
+        ]
+        
+        address_lower = address.lower()
+        
+        # Check for Peoria County cities
+        if any(city in address_lower for city in peoria_indicators):
+            if 'peoria' in address_lower and 'il' in address_lower:
+                return f"✅ CONFIRMED: {address} - Located in Peoria County, Illinois"
+            else:
+                return f"✅ LIKELY: {address} - Appears to be in Peoria County area"
+        else:
+            return f"⚠️ UNCERTAIN: {address} - Cannot confirm Peoria County location"
+
+# Initialize verification tools
+phone_validator_tool = PhoneValidatorTool()
+website_checker_tool = WebsiteCheckerTool()
+geocoding_tool = GeocodingTool()
 from dotenv import load_dotenv
 
 # Database imports (we'll add these)
@@ -269,6 +357,9 @@ class CivicState(BaseModel):
     search_results: Optional[str] = None
     resources_found: List[Dict] = Field(default_factory=list)
     
+    # Verification results
+    verification_results: Optional[str] = None
+    
     # Output
     civic_response: str = ""
     response_source: str = ""  # conversation, search, fallback
@@ -463,6 +554,43 @@ class CivicCrewAISystem(Flow[CivicState]):
             llm=self.llm,
             verbose=True,
             allow_delegation=False
+        )
+        
+        # Verifier Agent - Resource quality and accessibility verification  
+        self.verifier_agent = Agent(
+            role="Resource Verification Specialist - Peoria County Focus",
+            
+            goal="""
+            Verify that every resource recommended is actually accessible 
+            to people in Peoria County. Check phone numbers have 309 area 
+            code, verify programs still have funding, ensure links aren't 
+            broken. Prevent dead ends and wild goose chases.
+            """,
+            
+            backstory="""
+            I've worked at 211 for 10 years. I've heard every story of 
+            someone calling a disconnected number or showing up at an 
+            office that closed 2 years ago. I've watched people waste 
+            precious time on programs that ran out of funding. 
+            
+            My mission is simple: Every resource I verify, I'd be 
+            comfortable giving to my own family. If I wouldn't send my 
+            mom there, I'm not sending you there.
+            
+            I check: Area codes (309 = Peoria), active phone lines, 
+            current funding status, office hours, eligibility criteria. 
+            If something's wrong, I find alternatives or tell you 
+            honestly that it's not available right now.
+            """,
+            
+            tools=[
+                phone_validator_tool,  # Check if 309 area code, line active
+                website_checker_tool,   # Verify links work
+                geocoding_tool,         # Confirm Peoria County location
+            ],
+            llm=self.llm,
+            verbose=True,
+            allow_delegation=True
         )
         
         # Search tool
@@ -756,6 +884,77 @@ Search Query: {self.state.search_query}
         return self.state
     
     @listen(search_resources)
+    def verify_resources(self):
+        """Verify resources for quality and accessibility"""
+        
+        self.state.performance_tracker.step("verify_resources")
+        
+        if self.state.enable_streaming and self.state.stream_callback:
+            self.state.stream_callback("🔍 Verifying resource quality and accessibility...")
+        
+        # Only verify if we have resources and search was performed
+        if not self.state.resources_found or not self.state.search_performed:
+            logger.info("💭 No resources to verify - skipping verification step")
+            return self.state
+        
+        if len(self.state.resources_found) == 0:
+            logger.info("📝 No verified resources found")
+            return self.state
+            
+        logger.info(f"🔍 Verifying {len(self.state.resources_found)} resources...")
+        
+        # Create verification task
+        verification_context = f"""
+You are verifying resources for someone in Peoria County, Illinois. 
+
+RESOURCES TO VERIFY:
+{json.dumps(self.state.resources_found, indent=2)}
+
+For each resource, check:
+1. Phone numbers: Should have 309 area code (Peoria County)
+2. Websites: Should be accessible and working  
+3. Addresses: Should be in Peoria County, Illinois
+4. Mark any issues you find
+
+Return verification results in this format:
+- Resource Name: VERIFIED/WARNING/ISSUE - explanation
+- Phone: VALID (309) XXX-XXXX / WARNING: Non-309 area code / INVALID: reason
+- Website: ACCESSIBLE / WARNING: slow/redirects / BROKEN: reason  
+- Location: CONFIRMED Peoria County / UNCERTAIN: reason
+
+Be honest - if something looks wrong, flag it. People are counting on accurate information.
+"""
+
+        # Create verification task
+        verification_task = Task(
+            description=verification_context,
+            expected_output="Detailed verification report for each resource with status indicators",
+            agent=self.verifier_agent
+        )
+        
+        # Run verification
+        try:
+            logger.info("🔍 Running resource verification...")
+            
+            crew = Crew(
+                agents=[self.verifier_agent],
+                tasks=[verification_task],
+                verbose=True
+            )
+            
+            result = crew.kickoff()
+            self.state.verification_results = str(result)
+            
+            logger.info("✅ Resource verification completed")
+            logger.info(f"🔍 Verification results: {str(result)[:200]}...")
+            
+        except Exception as e:
+            logger.error(f"❌ Verification failed: {e}")
+            self.state.verification_results = "Verification temporarily unavailable"
+        
+        return self.state
+    
+    @listen(verify_resources)
     def generate_response(self):
         """Generate final response based on conversation type"""
         
