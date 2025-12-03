@@ -165,6 +165,30 @@ const CivicResourceAgent: React.FC = () => {
     }
   };
 
+  const testApiKey = async () => {
+    if (!apiKeys.anthropic.trim()) {
+      alert('Please enter an Anthropic API key first!');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/test-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anthropic_key: apiKeys.anthropic })
+      });
+      
+      const result = await response.json();
+      if (result.valid) {
+        alert('✅ API key is valid!');
+      } else {
+        alert(`❌ API key failed: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`❌ Error testing API key: ${error}`);
+    }
+  };
+
   const saveApiKeys = () => {
     if (!apiKeys.anthropic.trim()) {
       alert('Anthropic API key is required!');
@@ -173,10 +197,15 @@ const CivicResourceAgent: React.FC = () => {
     localStorage.setItem('anthropic_key', apiKeys.anthropic);
     localStorage.setItem('serper_key', apiKeys.serper);
     setShowConfig(false);
+    alert('✅ API keys saved!');
   };
 
   const sendMessageStreaming = async () => {
     if (!input.trim() || isLoading) return;
+    
+    // Debug: Log API keys (first few chars only for security)
+    console.log('Anthropic key:', apiKeys.anthropic ? apiKeys.anthropic.substring(0, 10) + '...' : 'NOT SET');
+    console.log('Serper key:', apiKeys.serper ? apiKeys.serper.substring(0, 10) + '...' : 'NOT SET');
     
     if (!apiKeys.anthropic) {
       setShowConfig(true);
@@ -460,9 +489,14 @@ const CivicResourceAgent: React.FC = () => {
             </div>
             
             <div className="config-actions">
-              <button onClick={saveApiKeys} className="save-button">
-                Save Configuration
-              </button>
+              <div style={{display: 'flex', gap: '10px'}}>
+                <button onClick={testApiKey} className="save-button" style={{backgroundColor: '#4CAF50'}}>
+                  Test API Key
+                </button>
+                <button onClick={saveApiKeys} className="save-button">
+                  Save Configuration
+                </button>
+              </div>
             </div>
             
             <div className="config-help">
@@ -649,7 +683,12 @@ const CivicResourceAgent: React.FC = () => {
           {backendConnected ? 'CONNECTED' : 'DISCONNECTED'}
         </span>
         {apiKeys.anthropic ? (
-          <span className="status-connected"> • API CONFIGURED</span>
+          <>
+            <span className="status-connected"> • API CONFIGURED</span>
+            <button onClick={() => setShowConfig(true)} className="config-button" style={{marginLeft: '10px'}}>
+              EDIT KEYS
+            </button>
+          </>
         ) : (
           <button onClick={() => setShowConfig(true)} className="config-button">
             CONFIGURE API KEYS

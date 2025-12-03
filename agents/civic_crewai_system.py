@@ -697,26 +697,21 @@ Search Query: {self.state.search_query}
 
 ## CRITICAL: YOU MUST USE THE SEARCH TOOL
 
-**MANDATORY**: You MUST use the web search tool to find current, local civic resources. Do NOT use static knowledge or make assumptions.
+**SIMPLIFIED SEARCH**: Perform exactly 3 targeted searches maximum:
 
-**REQUIRED ACTIONS**:
-1. **FIRST**: Use the search tool with this exact query: "{self.state.search_query}"
-2. **THEN**: Use the search tool for specific local organizations like "Peoria rescue mission emergency housing", "Salvation Army Peoria housing", etc.
-3. **FINALLY**: Compile the search results into the response format below
+1. **PRIMARY**: "{self.state.search_query}"
+2. **LOCAL**: "Peoria Illinois {self.state.need_category} assistance programs"  
+3. **GOVERNMENT**: "Illinois {self.state.need_category} benefits eligibility"
 
-**SEARCH FOCUS**:
-- Local organizations (Peoria, Tazewell, Woodford counties)
-- Programs with NO or LOW barriers to entry  
-- Places with real phone numbers people can call
-- Programs currently accepting applications
-- Walk-in services or same-day help
+**FOCUS ON**:
+- Real phone numbers and addresses in Peoria area
+- Specific eligibility requirements and income limits
+- Immediate next steps people can take today
+- Current programs accepting applications
 
-**AVOID**:
-- National hotlines only (unless 211 or crisis line)
-- Programs requiring extensive documentation to start
-- Outdated or closed programs
+**OUTPUT GOAL**: Comprehensive resource list with complete contact information that answers the user's specific need.
 
-**IMPORTANT**: You must perform live web searches. Do not rely on pre-existing knowledge. Use the search tool multiple times if needed to find comprehensive, current information."""
+**LIMIT**: Use search tool exactly 3 times maximum. Quality over quantity."""
 
         # Create search task
         search_task = Task(
@@ -792,12 +787,25 @@ Search Query: {self.state.search_query}
             self.state.tool_usage_listener.setup_listeners(crewai_event_bus)
             logger.info("💬 Event listener registered for response tool transparency")
         
-        # Execute response generation - always use standard mode for now
-        result = crew.kickoff()
-        response_time = time.time() - response_start
-        logger.info(f"💬 Response generation completed in {response_time:.3f}s")
+        # SIMPLIFIED: Handle different response types without 4th agent
+        if self.state.response_source == "conversation":
+            # For greetings, use a warm conversational response
+            self.state.civic_response = "Hi there! 👋 Welcome! I'm here to help you find local resources and support in Central Illinois—whether that's help with housing, food, healthcare, jobs, or anything else you might need. What brings you in today? What can I help you with?"
+            logger.info("✅ Using conversational response - no search needed!")
+        elif self.state.search_results and self.state.search_performed:
+            # Use the amazing search results directly with simple prefix  
+            prefix = f"Here's what I found for your {self.state.need_category} needs:\n\n"
+            self.state.civic_response = prefix + str(self.state.search_results)
+            self.state.response_source = "direct_search_results"
+            logger.info("✅ Using direct search results - no 4th agent needed!")
+        else:
+            # Fallback only if something went wrong
+            self.state.civic_response = "I understand you need help. For immediate assistance, call 211 (available 24/7)."
+            self.state.response_source = "fallback"
+            logger.info("⚠️ No search results, using fallback")
         
-        self.state.civic_response = str(result).strip()
+        response_time = time.time() - response_start
+        logger.info(f"💬 Direct response completed in {response_time:.3f}s")
         
         # Save to memory
         try:

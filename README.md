@@ -78,40 +78,38 @@ An AI-powered civic concierge that:
 - **Matches you to programs** based on eligibility criteria
 - **Provides actionable next steps** to get help
 
-## Quick Start
+## 🟢 WORKING SYSTEM - Quick Start
 
-### Option 1: Automated Setup (Recommended)
+### ✅ CONFIRMED WORKING SETUP (December 2024)
+
+**The ONLY working configuration:**
+
 ```bash
-# Clone repository
-git clone https://github.com/thecuriousnobody/civic-problem-solver.git
-cd civic-problem-solver
+# 1. Start the system
+./start-demo.sh
 
-# Run automated setup
-./setup.sh
-
-# Edit .env file with your API keys
-# Required: ANTHROPIC_API_KEY from https://console.anthropic.com
-# Optional: SERPER_API_KEY from https://serper.dev
+# This runs:
+# - Backend: /api/endpoints/civic_api.py on port 8001
+# - Frontend: React app on port 3000
 ```
 
-### Option 2: Manual Setup
-```bash
-# 1. Environment setup
-cp .env.example .env
-# Edit .env with your API keys
+**✅ WORKING COMPONENTS:**
+- **Backend API**: `/api/endpoints/civic_api.py` ✅ 
+- **Agents**: `civic_crewai_system.py` ✅
+- **Model**: `anthropic/claude-haiku-4-5-20251001` ✅
+- **Frontend**: Port 3000 with API key configuration ✅
 
-# 2. Backend
-cd api
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python endpoints/civic_api.py
+**🚫 NON-WORKING FILES (DO NOT USE):**
+- `/api/simple_civic_api.py` ❌ (causes API key errors)
+- `civic_flow.py` ❌ (flow system issues)
 
-# 3. Frontend  
-cd ../frontend
-npm install
-npm run dev
-```
+### Configuration
+1. Go to http://localhost:3000
+2. Click "EDIT KEYS" 
+3. Enter your Anthropic API key from https://console.anthropic.com
+4. Click "Test API Key" to verify it works
+5. Click "Save Configuration"
+6. Test with: "I need food assistance in Peoria"
 
 ### Configuration
 

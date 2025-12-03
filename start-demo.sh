@@ -5,17 +5,17 @@ echo "🏛️  Starting Civic Problem Solver..."
 echo
 
 # Check if we're in the right directory
-if [ ! -f "api/simple_civic_api.py" ]; then
+if [ ! -f "api/endpoints/civic_api.py" ]; then
     echo "❌ Please run this script from the civic-problem-solver directory"
     exit 1
 fi
 
 # Start backend
 echo "🚀 Starting backend on port 8001..."
-cd api
-python simple_civic_api.py &
+cd api/endpoints
+python civic_api.py &
 BACKEND_PID=$!
-cd ..
+cd ../..
 
 # Wait a moment for backend to start
 sleep 3

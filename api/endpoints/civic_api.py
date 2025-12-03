@@ -101,6 +101,33 @@ async def health_check():
         "system": "2-agent-crewai-postgresql"
     }
 
+@app.post("/api/test-key")
+async def test_api_key(request: dict):
+    """Test if Anthropic API key is valid"""
+    try:
+        import anthropic
+        
+        api_key = request.get('anthropic_key')
+        if not api_key:
+            return {"valid": False, "error": "No API key provided"}
+        
+        logger.info(f"Testing API key: {api_key[:15]}...")
+        
+        # Test with a simple completion
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=10,
+            messages=[{"role": "user", "content": "Say 'test'"}]
+        )
+        
+        logger.info("✅ API key validation successful")
+        return {"valid": True, "message": "API key works!"}
+        
+    except Exception as e:
+        logger.error(f"❌ API key validation failed: {e}")
+        return {"valid": False, "error": str(e)}
+
 @app.post("/api/query", response_model=CivicResponse)
 async def civic_query(request: CivicRequest):
     """
@@ -114,15 +141,26 @@ async def civic_query(request: CivicRequest):
     """
     
     try:
+        # Debug: Log what API keys we received
+        logger.info(f"API keys received: {bool(request.api_keys)}")
+        if request.api_keys:
+            anthropic_key = request.api_keys.get('anthropic', '')
+            logger.info(f"Anthropic key length: {len(anthropic_key)}")
+            logger.info(f"Anthropic key preview: {anthropic_key[:15]}..." if anthropic_key else "No anthropic key")
+        
         # Set API keys if provided
         if request.api_keys:
             if request.api_keys.get('anthropic'):
                 os.environ['ANTHROPIC_API_KEY'] = request.api_keys['anthropic']
+                logger.info("✅ Set ANTHROPIC_API_KEY from request")
             if request.api_keys.get('serper'):
                 os.environ['SERPER_API_KEY'] = request.api_keys['serper']
+                logger.info("✅ Set SERPER_API_KEY from request")
         
         # Check required API key
-        if not os.getenv('ANTHROPIC_API_KEY'):
+        current_key = os.getenv('ANTHROPIC_API_KEY', '')
+        logger.info(f"Current ANTHROPIC_API_KEY length: {len(current_key)}")
+        if not current_key:
             raise HTTPException(status_code=400, detail="Anthropic API key required")
         
         # Run civic chat
