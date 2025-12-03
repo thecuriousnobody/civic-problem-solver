@@ -860,7 +860,11 @@ Search Query: {self.state.search_query}
     
     def _parse_search_results(self):
         """Parse search results into structured resources"""
+        logger.info(f"🔍 Starting to parse search results for category: {self.state.need_category}")
+        logger.info(f"🔍 Search results length: {len(str(self.state.search_results)) if self.state.search_results else 0}")
+        
         if not self.state.search_results:
+            logger.warning("⚠️ No search results to parse!")
             return
             
         # Parse actual search results into structured resources
@@ -885,8 +889,8 @@ Search Query: {self.state.search_query}
             if not line:
                 continue
                 
-            # Look for organization names (often in caps or starting sections)
-            if any(keyword in line.upper() for keyword in ['CAREER LINK', 'GOODWILL', 'COLLEGE', 'CENTER', 'PROGRAM']):
+            # Look for organization names (based on actual search results format)
+            if any(keyword in line.upper() for keyword in ['CAREER LINK', 'GOODWILL', 'ILLINOIS CENTRAL COLLEGE', 'PRIMARY RESOURCE:', 'SECONDARY RESOURCE:', '**CAREER LINK', '**GOODWILL']):
                 if current_resource and 'name' in current_resource:
                     resources.append(current_resource)
                     current_resource = {}
