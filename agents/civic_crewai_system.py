@@ -895,7 +895,14 @@ Search Query: {self.state.search_query}
                     resources.append(current_resource)
                     current_resource = {}
                 
-                current_resource['name'] = re.sub(r'^[-•*]\s*', '', line).strip()
+                # Clean up name - remove markdown and formatting
+                clean_name = re.sub(r'^[-•*#]+\s*', '', line).strip()  # Remove bullets and headers
+                clean_name = re.sub(r'\*\*([^*]+)\*\*', r'\1', clean_name)  # Remove bold markdown **text**
+                clean_name = re.sub(r'[#]+\s*', '', clean_name)  # Remove remaining headers
+                clean_name = re.sub(r'PRIMARY RESOURCE:\s*', '', clean_name)  # Remove labels
+                clean_name = re.sub(r'SECONDARY RESOURCE:\s*', '', clean_name)  # Remove labels
+                
+                current_resource['name'] = clean_name
                 current_resource['category'] = self.state.need_category.replace('_', ' ').title()
                 current_resource['description'] = ""
                 current_resource['contact'] = ""
@@ -934,6 +941,15 @@ Search Query: {self.state.search_query}
             
         # Clean up resources and add missing fields
         for resource in resources:
+            # Clean up description text - remove markdown formatting
+            if resource.get('description'):
+                desc = resource['description']
+                desc = re.sub(r'\*\*([^*]+)\*\*', r'\1', desc)  # Remove bold **text**
+                desc = re.sub(r'[#]+\s*', '', desc)  # Remove headers
+                desc = re.sub(r'[-•*]\s+', '', desc)  # Remove bullet points
+                desc = re.sub(r'\s+', ' ', desc)  # Normalize whitespace
+                resource['description'] = desc.strip()
+            
             if not resource.get('location'):
                 resource['location'] = "Central Illinois area"
             if not resource.get('next_step'):
