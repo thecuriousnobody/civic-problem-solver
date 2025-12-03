@@ -1098,7 +1098,8 @@ Search Query: {self.state.search_query}
                 }
             ])
             
-        elif "employment" in self.state.need_category:
+        # Only add fallback employment resources if we didn't parse any specific resources
+        elif "employment" in self.state.need_category and len(resources) == 0:
             resources.extend([
                 {
                     "name": "Small Business Development Center - Bradley University",
