@@ -40,6 +40,34 @@ function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', { hour12: false });
 }
 
+function linkifyText(text: string) {
+  // Regex to detect URLs
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+  
+  return text.split(urlRegex).map((part, index) => {
+    if (urlRegex.test(part)) {
+      // Ensure URL has protocol
+      const href = part.startsWith('http') ? part : `https://${part}`;
+      return (
+        <a 
+          key={index} 
+          href={href} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{ 
+            color: 'var(--accent-blue)', 
+            textDecoration: 'underline',
+            wordBreak: 'break-all'
+          }}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 const CivicResourceAgent: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -739,9 +767,28 @@ const CivicResourceAgent: React.FC = () => {
               <div key={index} className={`message ${message.role}`}>
                 <div className="message-text">
                   {message.role === 'agent' ? (
-                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                    <ReactMarkdown
+                      components={{
+                        a: ({ href, children }) => (
+                          <a 
+                            href={href} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ 
+                              color: 'var(--accent-blue)', 
+                              textDecoration: 'underline',
+                              wordBreak: 'break-all'
+                            }}
+                          >
+                            {children}
+                          </a>
+                        )
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
                   ) : (
-                    message.content
+                    <span>{linkifyText(message.content)}</span>
                   )}
                 </div>
                 <div className="message-time">{message.timestamp}</div>
