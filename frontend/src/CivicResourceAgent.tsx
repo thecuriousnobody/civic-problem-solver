@@ -70,27 +70,20 @@ function linkifyText(text: string) {
 
 // Also linkify agent responses 
 function linkifyMarkdown(text: string) {
-  // Convert URLs to markdown links for ReactMarkdown, and clean up markdown formatting
-  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|www\.[^\s<>"{}|\\^`\[\]]+)/g;
+  // Simple, reliable URL to markdown conversion
+  // Match complete URLs including paths, but stop at whitespace or common punctuation
+  const urlRegex = /(https?:\/\/[^\s\])}]+|www\.[^\s\])}]+)/g;
   
-  // First handle cases like "**Website: https://example.com**" 
-  let processedText = text.replace(/\*\*([^*]*)(https?:\/\/[^\s<>"{}|\\^`\[\]]+|www\.[^\s<>"{}|\\^`\[\]]+)([^*]*)\*\*/g, 
-    (match, before, url, after) => {
-      const href = url.startsWith('http') ? url : `https://${url}`;
-      return `**${before}[${url}](${href})${after}**`;
-    });
-  
-  // Then handle standalone URLs
-  processedText = processedText.replace(urlRegex, (url) => {
-    // Skip if already processed as part of markdown link
-    if (processedText.includes(`[${url}](`) || processedText.includes(`](${url})`)) {
+  return text.replace(urlRegex, (url) => {
+    // Don't double-process if already a markdown link
+    const beforeUrl = text.substring(0, text.indexOf(url));
+    if (beforeUrl.endsWith('[') || beforeUrl.includes(`[${url}](`)) {
       return url;
     }
+    
     const href = url.startsWith('http') ? url : `https://${url}`;
     return `[${url}](${href})`;
   });
-  
-  return processedText;
 }
 
 const CivicResourceAgent: React.FC = () => {
