@@ -863,10 +863,91 @@ Search Query: {self.state.search_query}
         if not self.state.search_results:
             return
             
-        # Get comprehensive housing resources for Central Illinois
+        # Parse actual search results into structured resources
         resources = []
         
-        # Housing resources - always provide comprehensive Peoria housing options
+        # Try to extract structured data from search results
+        search_text = str(self.state.search_results)
+        
+        # Simple resource extraction - look for common patterns
+        import re
+        
+        # Extract organization names, phones, and websites from search results
+        phone_pattern = r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+        url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
+        
+        # Better parsing for structured search results
+        lines = search_text.split('\n')
+        current_resource = {}
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Look for organization names (often in caps or starting sections)
+            if any(keyword in line.upper() for keyword in ['CAREER LINK', 'GOODWILL', 'COLLEGE', 'CENTER', 'PROGRAM']):
+                if current_resource and 'name' in current_resource:
+                    resources.append(current_resource)
+                    current_resource = {}
+                
+                current_resource['name'] = re.sub(r'^[-•*]\s*', '', line).strip()
+                current_resource['category'] = self.state.need_category.replace('_', ' ').title()
+                current_resource['description'] = ""
+                current_resource['contact'] = ""
+                current_resource['url'] = ""
+                
+            # Extract phone numbers
+            phones = re.findall(phone_pattern, line)
+            if phones and 'contact' in current_resource:
+                current_resource['contact'] = phones[0]
+                
+            # Extract URLs
+            urls = re.findall(url_pattern, line)
+            if urls and 'url' in current_resource:
+                current_resource['url'] = urls[0]
+                
+            # Extract addresses
+            if 'address:' in line.lower() or 'location:' in line.lower():
+                current_resource['location'] = line.split(':', 1)[1].strip() if ':' in line else line
+                
+            # Build description from relevant lines
+            if 'name' in current_resource and line != current_resource['name']:
+                if any(word in line.lower() for word in ['services:', 'what they offer:', 'training', 'assistance', 'help']):
+                    if current_resource['description']:
+                        current_resource['description'] += " " + line
+                    else:
+                        current_resource['description'] = line
+        
+        # Add final resource
+        if current_resource and 'name' in current_resource:
+            resources.append(current_resource)
+            
+        # Clean up resources and add missing fields
+        for resource in resources:
+            if not resource.get('location'):
+                resource['location'] = "Central Illinois area"
+            if not resource.get('next_step'):
+                resource['next_step'] = f"Contact for {self.state.need_category.replace('_', ' ')} assistance"
+            if not resource.get('eligibility'):
+                resource['eligibility'] = "Contact for eligibility requirements"
+            if not resource.get('description'):
+                resource['description'] = f"Local {self.state.need_category.replace('_', ' ')} resource"
+        
+        # If no resources extracted from search, provide fallback
+        if not resources and self.state.search_results:
+            resources.append({
+                "name": "Search Results Information",
+                "category": self.state.need_category.replace('_', ' ').title(),
+                "description": str(self.state.search_results)[:300] + "..." if len(str(self.state.search_results)) > 300 else str(self.state.search_results),
+                "contact": "See details for contact information",
+                "url": "",
+                "next_step": f"Review details for {self.state.need_category.replace('_', ' ')} assistance",
+                "location": "Central Illinois",
+                "eligibility": "Varies by program"
+            })
+        
+        # Housing resources - add specific housing options if housing category
         if "housing" in self.state.need_category:
             
             # Add core housing resources based on urgency
