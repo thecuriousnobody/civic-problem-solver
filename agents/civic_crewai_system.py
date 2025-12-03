@@ -35,7 +35,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from crewai.flow.flow import Flow, listen, start
 from crewai import Agent, Task, Crew, LLM
-from crewai_tools import SerperDevTool
+from crewai_tools import SerperDevTool, BaseTool
 from crewai.events import (
     ToolUsageStartedEvent, 
     ToolUsageFinishedEvent,
@@ -44,12 +44,11 @@ from crewai.events import (
 )
 
 # Verification Tools for Peoria County Resource Validation
-class PhoneValidatorTool:
+class PhoneValidatorTool(BaseTool):
     """Validates phone numbers for Peoria County (309 area code) and checks if lines are active"""
     
-    def __init__(self):
-        self.name = "phone_validator_tool"
-        self.description = "Validates phone numbers have 309 area code and checks if lines are active"
+    name: str = "phone_validator_tool"
+    description: str = "Validates phone numbers have 309 area code and checks if lines are active"
     
     def _run(self, phone_number: str) -> str:
         """Validate a phone number for Peoria County"""
@@ -70,12 +69,11 @@ class PhoneValidatorTool:
         else:
             return f"❌ INVALID: {phone_number} - Invalid phone number format"
 
-class WebsiteCheckerTool:
+class WebsiteCheckerTool(BaseTool):
     """Checks if websites are accessible and not broken"""
     
-    def __init__(self):
-        self.name = "website_checker_tool"
-        self.description = "Verifies website links work and are accessible"
+    name: str = "website_checker_tool"
+    description: str = "Verifies website links work and are accessible"
     
     def _run(self, url: str) -> str:
         """Check if a website URL is accessible"""
@@ -98,12 +96,11 @@ class WebsiteCheckerTool:
         except requests.RequestException as e:
             return f"❌ BROKEN: {url} - Website not accessible ({str(e)[:100]})"
 
-class GeocodingTool:
+class GeocodingTool(BaseTool):
     """Verifies locations are within Peoria County, Illinois"""
     
-    def __init__(self):
-        self.name = "geocoding_tool"  
-        self.description = "Confirms addresses are located within Peoria County, Illinois"
+    name: str = "geocoding_tool"  
+    description: str = "Confirms addresses are located within Peoria County, Illinois"
     
     def _run(self, address: str) -> str:
         """Verify address is in Peoria County"""
@@ -126,7 +123,7 @@ class GeocodingTool:
         else:
             return f"⚠️ UNCERTAIN: {address} - Cannot confirm Peoria County location"
 
-# Initialize verification tools
+# Initialize verification tools  
 phone_validator_tool = PhoneValidatorTool()
 website_checker_tool = WebsiteCheckerTool()
 geocoding_tool = GeocodingTool()
